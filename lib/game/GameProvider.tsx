@@ -6,6 +6,7 @@ import {
   useContext,
   useMemo,
   useReducer,
+  useState,
   type ReactNode,
 } from "react";
 import { HIRE_THRESHOLD, VERCEL_INTERVIEW } from "./interviewData";
@@ -50,7 +51,7 @@ const initialNotifications: GameNotification[] = [
     id: "welcome-proxy",
     from: "Proxy",
     title: "Hey — I'm your co-pilot",
-    body: "Click the desk PC to check mail. Apply when you're ready. The door's locked for now — we're shipping MVP first.",
+    body: "Walk to the desk and press E for the PC. Drag on the game to look around. Esc opens the menu. Door’s still locked for MVP.",
     time: "now",
   },
   {
@@ -198,9 +199,30 @@ function reducer(state: State, action: Action): State {
   }
 }
 
+const LOOK_SENS_KEY = "startup-life-look-sens";
+
+function readStoredLookSensitivity(): number {
+  if (typeof window === "undefined") return 0.0024;
+  try {
+    const raw = localStorage.getItem(LOOK_SENS_KEY);
+    if (raw == null) return 0.0024;
+    const n = Number.parseFloat(raw);
+    if (Number.isFinite(n) && n >= 0.0008 && n <= 0.006) return n;
+  } catch {
+    /* ignore */
+  }
+  return 0.0024;
+}
+
 type Ctx = {
   state: State;
   questions: typeof VERCEL_INTERVIEW;
+  menuOpen: boolean;
+  openMenu: () => void;
+  closeMenu: () => void;
+  toggleMenu: () => void;
+  lookSensitivity: number;
+  setLookSensitivity: (v: number) => void;
   tryDoor: () => void;
   dismissDoor: () => void;
   setPc: (open: boolean) => void;
@@ -218,6 +240,22 @@ const GameContext = createContext<Ctx | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [lookSensitivity, setLookSensState] = useState(readStoredLookSensitivity);
+
+  const setLookSensitivity = useCallback((v: number) => {
+    const clamped = Math.min(0.006, Math.max(0.0008, v));
+    setLookSensState(clamped);
+    try {
+      localStorage.setItem(LOOK_SENS_KEY, String(clamped));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const toggleMenu = useCallback(() => setMenuOpen((m) => !m), []);
 
   const tryDoor = useCallback(() => dispatch({ type: "TRY_DOOR" }), []);
   const dismissDoor = useCallback(() => dispatch({ type: "DISMISS_DOOR" }), []);
@@ -251,6 +289,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       questions: VERCEL_INTERVIEW,
+      menuOpen,
+      openMenu,
+      closeMenu,
+      toggleMenu,
+      lookSensitivity,
+      setLookSensitivity,
       tryDoor,
       dismissDoor,
       setPc,
@@ -265,6 +309,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      menuOpen,
+      openMenu,
+      closeMenu,
+      toggleMenu,
+      lookSensitivity,
+      setLookSensitivity,
       tryDoor,
       dismissDoor,
       setPc,

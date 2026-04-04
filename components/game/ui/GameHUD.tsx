@@ -2,9 +2,11 @@
 
 import { useGame } from "@/lib/game/GameProvider";
 import { HIRE_THRESHOLD } from "@/lib/game/interviewData";
+import { useInteractionHint } from "../InteractionHintContext";
 
 export function GameHUD() {
-  const { state, questions } = useGame();
+  const { state, questions, menuOpen } = useGame();
+  const { hint } = useInteractionHint();
 
   const phaseLabel =
     state.phase === "bedroom"
@@ -15,12 +17,29 @@ export function GameHUD() {
 
   const proxyTip =
     state.phase === "bedroom"
-      ? "Proxy: Click the glowing monitor to open your PC. The door is locked for now."
+      ? "Proxy: WASD moves you. Click and drag on the 3D view to look — cursor stays visible when you’re only walking. Esc opens the menu."
       : state.phase === "interview"
-        ? "Proxy: Pick answers that sound like you shipped real work — not buzzwords."
-        : "Proxy: Hit Work to earn cash and XP. Rare CEO cameos can pop up.";
+        ? "Proxy: Dialogue is locked in — pick an answer like a story choice. Score 6+ to clear."
+        : "Proxy: Work sessions stack XP. Explore the cubicle; walls are solid.";
+
+  const showCrosshair =
+    !menuOpen &&
+    !state.showPc &&
+    !state.doorMessage &&
+    !(
+      state.phase === "interview" &&
+      !state.interviewResult &&
+      state.interviewIndex < questions.length
+    );
 
   return (
+    <>
+      {showCrosshair ? (
+        <div
+          className="pointer-events-none fixed left-1/2 top-1/2 z-20 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-white/30 shadow-[0_0_6px_rgba(255,255,255,0.6)]"
+          aria-hidden
+        />
+      ) : null}
     <header className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex flex-col gap-2 p-3 sm:p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="pointer-events-auto rounded-xl border border-white/10 bg-slate-950/85 px-3 py-2 shadow-xl backdrop-blur-md sm:px-4">
@@ -66,5 +85,11 @@ export function GameHUD() {
         {proxyTip}
       </p>
     </header>
+      {hint ? (
+        <div className="pointer-events-none fixed bottom-24 left-1/2 z-20 -translate-x-1/2 rounded-full border border-emerald-500/40 bg-slate-950/90 px-4 py-2 font-mono text-xs text-emerald-200 shadow-lg">
+          {hint}
+        </div>
+      ) : null}
+    </>
   );
 }
