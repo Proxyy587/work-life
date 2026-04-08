@@ -7,7 +7,7 @@ import {
   RapierRigidBody,
   RigidBody,
 } from "@react-three/rapier";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { useGame } from "@/lib/game/GameProvider";
 import { useGameViewSurface } from "./GameViewSurfaceContext";
@@ -64,10 +64,15 @@ export function FirstPersonRig() {
       !state.interviewResult &&
       state.interviewIndex < questions.length);
 
-  blockRef.current = blockMovement;
-  sensRef.current = lookSensitivity;
-
   const phaseKey = state.phase;
+
+  useLayoutEffect(() => {
+    blockRef.current = blockMovement;
+  }, [blockMovement]);
+
+  useLayoutEffect(() => {
+    sensRef.current = lookSensitivity;
+  }, [lookSensitivity]);
 
   const endLookDrag = useCallback(() => {
     const el = gl.domElement;
@@ -89,7 +94,9 @@ export function FirstPersonRig() {
   }, [gl.domElement, surfaceRef]);
 
   const endLookDragRef = useRef(endLookDrag);
-  endLookDragRef.current = endLookDrag;
+  useLayoutEffect(() => {
+    endLookDragRef.current = endLookDrag;
+  }, [endLookDrag]);
 
   useEffect(() => {
     const s = SPAWNS[phaseKey];
@@ -115,6 +122,7 @@ export function FirstPersonRig() {
 
   useEffect(() => {
     const el = gl.domElement;
+    const wrapSnapshot = surfaceRef.current;
 
     const onDown = (e: PointerEvent) => {
       if (e.button !== 0 || blockRef.current) return;
@@ -155,8 +163,7 @@ export function FirstPersonRig() {
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
       el.removeEventListener("lostpointercapture", onLost);
-      const wrap = surfaceRef.current;
-      if (wrap) wrap.style.cursor = "auto";
+      if (wrapSnapshot) wrapSnapshot.style.cursor = "auto";
     };
   }, [gl.domElement, endLookDrag, surfaceRef]);
 
